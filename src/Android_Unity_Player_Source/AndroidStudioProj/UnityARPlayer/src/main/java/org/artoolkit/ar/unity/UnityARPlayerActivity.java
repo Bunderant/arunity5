@@ -164,13 +164,20 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
 
         super.onResume();
 
-        // Add camera preview as a new view.
-
-        ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
-
         // Create the camera preview.
         previewView = new CameraSurface(this);
-        decorView.addView(previewView, new LayoutParams(128, 128));
+
+
+        // TODO: bunderant - The delay code here is just a temporary hack to hide the cam square. Should open/close camera while AR is running, rather than the app itself.
+        // Add camera preview as a new view, delayed by 2000ms so not to appear before splash screen.
+        new android.os.Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
+                decorView.addView(previewView, new LayoutParams(128, 128));
+            }
+        }, 2000);
+
 
         Log.i(TAG, "onResume() - All done!");
     }
