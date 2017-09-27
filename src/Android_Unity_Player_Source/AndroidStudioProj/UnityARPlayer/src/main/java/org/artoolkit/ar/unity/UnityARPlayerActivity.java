@@ -104,8 +104,52 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         return null;
     }
 
+    private UnityARPlayerActivity self;
+    public void OpenCamera()
+    {
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.i(TAG, "/n/n/n/n =========== OPENING CAMERA ============ /n/n/n/n");
+
+                if (previewView != null) {
+                    Log.i(TAG, "/n/n/n/n =========== PREVIEW NOT NULL, DESTROYING ============ /n/n/n/n");
+                    CloseCamera();
+                }
+
+                previewView = new CameraSurface(self);
+
+                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
+                decorView.addView(previewView, new ViewGroup.LayoutParams(128, 128));
+            }
+        });
+
+    }
+
+    public void CloseCamera()
+    {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.i(TAG, "/n/n/n/n =========== CLOSE CAMERA ============ /n/n/n/n");
+
+                // Remove camera preview view.
+                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
+
+                // Simply remove the camera preview from the view hierarchy.
+                if (previewView != null) {
+                    decorView.removeView(previewView);
+                    previewView = null; // Make sure camera is released in onPause().
+                }
+            }
+        });
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        self = this;
+
         // For Epson Moverio BT-200.
         if (Build.MANUFACTURER.equals("EPSON") && Build.MODEL.equals("embt2")) {
             mDisplayControl = new DisplayControl(this);
@@ -164,21 +208,6 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
 
         super.onResume();
 
-        // Create the camera preview.
-        previewView = new CameraSurface(this);
-
-
-        // TODO: bunderant - The delay code here is just a temporary hack to hide the cam square. Should open/close camera while AR is running, rather than the app itself.
-        // Add camera preview as a new view, delayed by 2000ms so not to appear before splash screen.
-        new android.os.Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
-                decorView.addView(previewView, new LayoutParams(128, 128));
-            }
-        }, 2000);
-
-
         Log.i(TAG, "onResume() - All done!");
     }
 
@@ -187,15 +216,6 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         Log.i(TAG, "onPause()");
 
         super.onPause();
-
-        // Remove camera preview view.
-        ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
-        
-        // Simply remove the camera preview from the view hierarchy.
-        if (previewView != null) {
-            decorView.removeView(previewView);
-            previewView = null; // Make sure camera is released in onPause().
-        }
     }
 
     void launchPreferencesActivity() {
