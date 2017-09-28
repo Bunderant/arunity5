@@ -52,6 +52,7 @@ package org.artoolkit.ar.unity;
 import com.unity3d.player.UnityPlayerActivity;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -76,160 +77,88 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
 
     protected final static String TAG = "UnityARPlayerActivity";
 
-    private CameraSurface previewView = null;
-
-    // For Epson Moverio BT-200.
-    private DisplayControl mDisplayControl = null;
-
-    protected final static int PERMISSION_REQUEST_CAMERA = 77;
-
-
-    /**
-     * Walk a view hierarchy looking for the first SurfaceView.
-     * Search is depth first.
-     *
-     * @param v View hierarchy root.
-     * @return The first SurfaceView in the hierarchy, or null if none could be found.
-     */
-    private SurfaceView findSurfaceView(View v) {
-        if (v == null) return null;
-        else if (v instanceof SurfaceView) return (SurfaceView) v;
-        else if (v instanceof ViewGroup) {
-            int childCount = ((ViewGroup) v).getChildCount();
-            for (int i = 0; i < childCount; i++) {
-                SurfaceView ret = findSurfaceView(((ViewGroup) v).getChildAt(i));
-                if (ret != null) return ret;
-            }
-        }
-        return null;
-    }
-
-    private UnityARPlayerActivity self;
-    public void OpenCamera()
-    {
+    @SuppressWarnings("unused")
+    public void OpenCamera()  {
+        Log.i(TAG, "/n/n/n/n =========== OPENING CAMERA ============ /n/n/n/n");
 
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Log.i(TAG, "/n/n/n/n =========== OPENING CAMERA ============ /n/n/n/n");
-
-                if (previewView != null) {
-                    Log.i(TAG, "/n/n/n/n =========== PREVIEW NOT NULL, DESTROYING ============ /n/n/n/n");
-                    CloseCamera();
-                }
-
-                previewView = new CameraSurface(self);
-
-                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
-                decorView.addView(previewView, new ViewGroup.LayoutParams(128, 128));
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         });
 
+        CameraHolderNoThread.CommandOpenCamera();
+        CameraHolderNoThread.CommandStartCapture();
     }
 
-    public void CloseCamera()
-    {
+    @SuppressWarnings("unused")
+    public void CloseCamera()  {
+        Log.i(TAG, "/n/n/n/n =========== CLOSE CAMERA ============ /n/n/n/n");
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Log.i(TAG, "/n/n/n/n =========== CLOSE CAMERA ============ /n/n/n/n");
-
-                // Remove camera preview view.
-                ViewGroup decorView = (ViewGroup) getWindow().getDecorView();
-
-                // Simply remove the camera preview from the view hierarchy.
-                if (previewView != null) {
-                    decorView.removeView(previewView);
-                    previewView = null; // Make sure camera is released in onPause().
-                }
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         });
+
+        CameraHolderNoThread.CommandStopCapture();
+        CameraHolderNoThread.CommandCloseCamera();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        self = this;
-
-        // For Epson Moverio BT-200.
-        if (Build.MANUFACTURER.equals("EPSON") && Build.MODEL.equals("embt2")) {
-            mDisplayControl = new DisplayControl(this);
-            //private static final int FLAG_SMARTFULLSCREEN = 0x80000000; // For Epson Moverio BT-200.
-            getWindow().addFlags(0x80000000);
-        }
 
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        View root = findViewById(android.R.id.content);
-        if (root != null) {
-            root.setKeepScreenOn(true);
-        }
 
         // This needs to be done just only the very first time the application is run,
         // or whenever a new preference is added (e.g. after an application upgrade).
         int resID = getResources().getIdentifier("preferences", "xml", getPackageName());
         PreferenceManager.setDefaultValues(this, resID, false);
 
-        if (Build.VERSION.SDK_INT >= 23) {
-            //Request permission to use the camera on android 23+
-            int permissionCheck = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.CAMERA);
-            if (permissionCheck != PackageManager.PERMISSION_GRANTED)
-            {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
-            }
-        }
+//        if (Build.VERSION.SDK_INT >= 23) {
+//            //Request permission to use the camera on android 23+
+//            int permissionCheck = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.CAMERA);
+//            if (permissionCheck != PackageManager.PERMISSION_GRANTED)
+//            {
+//                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
+//            }
+//        }
 
     }
 
-	//Handle the result of asking the user for camera permission.
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSION_REQUEST_CAMERA: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    //Camera permission granted. If you NEED to show a toast, uncomment the line below.
-                    //Toast.makeText(this, "Camera Access Granted", Toast.LENGTH_SHORT).show();
-
-                } else {
-
-                    // TODO: Fail gracefully here.
-                    Toast.makeText(this, "Camera permissions are required for Augmented Reality", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-        }
-    }
-
-    @Override
-    protected void onResume() {
+    protected void onResume()
+    {
         Log.i(TAG, "onResume()");
-
         super.onResume();
 
-        Log.i(TAG, "onResume() - All done!");
+//        if(CameraHolderNoThread.IsReminderCapturing()) {
+//            CameraHolderNoThread.CommandOpenCamera();
+//            CameraHolderNoThread.CommandStartCapture();
+//        }
     }
 
     @Override
     protected void onPause() {
         Log.i(TAG, "onPause()");
-
         super.onPause();
+
+//        if(CameraHolderNoThread.IsCameraCapturing()) {
+//            CameraHolderNoThread.CommandCloseCamera();
+//            CameraHolderNoThread.ReminderCapturing(true);
+//        }
     }
 
-    void launchPreferencesActivity() {
-        // Disabled for now, don't want to ever ask users to set this up themselves. 
-        // startActivity(new Intent(this, CameraPreferencesActivity.class));
-    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
 
-    void setStereo(boolean stereo) {
-        // For Epson Moverio BT-200, enable stereo mode.
-        if (Build.MANUFACTURER.equals("EPSON") && Build.MODEL.equals("embt2")) {
-            //int dimension = (stereo ? DIMENSION_3D : DIMENSION_2D);
-            //set2d3d(dimension);
-            mDisplayControl.setMode(stereo ? DisplayControl.DISPLAY_MODE_3D : DisplayControl.DISPLAY_MODE_2D, stereo); // Last parameter is 'toast'.
-        }
+        CameraHolderNoThread.CommandStopCapture();
+        CameraHolderNoThread.CommandCloseCamera();
+        CameraHolderNoThread.Instance.DestroyCamera();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 }
 
