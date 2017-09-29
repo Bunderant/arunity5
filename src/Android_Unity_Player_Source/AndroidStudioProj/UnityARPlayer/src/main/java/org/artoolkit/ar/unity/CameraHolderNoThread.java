@@ -73,8 +73,7 @@ public class CameraHolderNoThread {
     public void OpenCamera() {
 
         if(mCamera != null) {
-            mCamera.release();
-            mCamera = null;
+            return;
         }
 
         // get camera ID
@@ -141,6 +140,7 @@ public class CameraHolderNoThread {
         if(mCamera != null) {
             try {
                 mCamera.stopPreview();
+                mCamera.setPreviewCallback(null); // <-- NEVER FORGET TO DO THIS AFTER STOP PREVIEW
 
                 mState = CameraHolderState.Idle;
                 Log.i(TAG, "Stop Capture Success");
@@ -213,92 +213,5 @@ public class CameraHolderNoThread {
             }
         }
         return camera_id;
-    }
-
-    // --------------------------------------------------
-    // Camera Holder Interactives
-    // --------------------------------------------------
-    public static void CommandOpenCamera() {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.OpenCamera();
-        }
-        else {
-            Log.i(TAG, "CommandOpenCamera() CameraHolderNoThread.Instance was null");
-        }
-    }
-
-    public static void CommandCloseCamera() {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.CloseCamera();
-        }
-        else {
-            Log.i(TAG, "CommandCloseCamera() CameraHolderNoThread.Instance was null");
-        }
-    }
-
-    public static void CommandStartCapture() {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.StartCapture();
-        }
-        else {
-            Log.i(TAG, "CommandStartCapture() CameraHolderNoThread.Instance was null");
-        }
-
-    }
-
-    public static void CommandStopCapture() {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.StopCapture();
-        }
-        else {
-            Log.i(TAG, "CommandStopCapture() CameraHolderNoThread.Instance was null");
-        }
-    }
-
-    public static void ConfigCameraResoulution(int w, int h)
-    {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.mConfigW = w;
-            CameraHolderNoThread.Instance.mConfigH = h;
-            Log.i(TAG, "Set Camera Resolution : " + w + " : " + h);
-        }
-    }
-
-    public static void ApplyConfig()
-    {
-        if (CameraHolderNoThread.Instance != null) {
-            CommandCloseCamera();
-            CommandOpenCamera();
-        }
-    }
-
-    public static Boolean IsCameraOpened()
-    {
-        if (CameraHolderNoThread.Instance != null) {
-            return CameraHolderNoThread.Instance.mState != CameraHolderState.Closed;
-        }
-        return false;
-    }
-
-    public static Boolean IsCameraCapturing()
-    {
-        if (CameraHolderNoThread.Instance != null) {
-            return CameraHolderNoThread.Instance.mState == CameraHolderState.Capturing;
-        }
-        return false;
-    }
-
-    public static void ReminderCapturing(Boolean v)
-    {
-        if (CameraHolderNoThread.Instance != null) {
-            CameraHolderNoThread.Instance.mReminderCapturing = v;
-        }
-    }
-
-    public static Boolean IsReminderCapturing(){
-        if (CameraHolderNoThread.Instance != null) {
-            return CameraHolderNoThread.Instance.mReminderCapturing;
-        }
-        return false;
     }
 }
