@@ -75,7 +75,10 @@ import android.widget.Toast;
 
 public class UnityARPlayerActivity extends UnityPlayerActivity {
 
+    protected final static int PERMISSION_REQUEST_CAMERA = 77;
+
     protected final static String TAG = "UnityARPlayerActivity";
+    private CameraHolder _holder;
 
     @SuppressWarnings("unused")
     public void OpenCamera()  {
@@ -88,8 +91,42 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
             }
         });
 
-        CameraHolderNoThread.CommandOpenCamera();
-        CameraHolderNoThread.CommandStartCapture();
+        if (Build.VERSION.SDK_INT >= 23) {
+            //Request permission to use the camera on android 23+
+            int permissionCheck = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.CAMERA);
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
+            }
+            else {
+                OpenAndStartCapture();
+            }
+        }
+        else {
+            OpenAndStartCapture();
+        }
+    }
+
+    //Handle the result of asking the user for camera permission.
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_CAMERA: {
+                // If request is cancelled/denied, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    OpenAndStartCapture();
+                } else {
+
+                    // TODO: Fail gracefully here.
+                    Toast.makeText(this, "Camera permissions are required for Augmented Reality", Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+    }
+
+    private void OpenAndStartCapture() {
+        _holder.OpenCamera();
+        _holder.StartCapture();
     }
 
     @SuppressWarnings("unused")
@@ -99,12 +136,17 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                try {
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                }
+                catch(Exception e) {
+                    Log.e(TAG, "Could not clear flags with message: " + e.getMessage());
+                }
             }
         });
 
-        CameraHolderNoThread.CommandStopCapture();
-        CameraHolderNoThread.CommandCloseCamera();
+        _holder.StopCapture();
+        _holder.CloseCamera();
     }
 
     @Override
@@ -112,43 +154,13 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
 
         super.onCreate(savedInstanceState);
 
+        //_holder = new CameraHolderNoThread();
+        _holder = new CameraHolder();
+
         // This needs to be done just only the very first time the application is run,
         // or whenever a new preference is added (e.g. after an application upgrade).
         int resID = getResources().getIdentifier("preferences", "xml", getPackageName());
         PreferenceManager.setDefaultValues(this, resID, false);
-
-//        if (Build.VERSION.SDK_INT >= 23) {
-//            //Request permission to use the camera on android 23+
-//            int permissionCheck = ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.CAMERA);
-//            if (permissionCheck != PackageManager.PERMISSION_GRANTED)
-//            {
-//                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
-//            }
-//        }
-
-    }
-
-    @Override
-    protected void onResume()
-    {
-        Log.i(TAG, "onResume()");
-        super.onResume();
-
-//        if(CameraHolderNoThread.IsReminderCapturing()) {
-//            CameraHolderNoThread.CommandOpenCamera();
-//            CameraHolderNoThread.CommandStartCapture();
-//        }
-    }
-
-    @Override
-    protected void onPause() {
-        Log.i(TAG, "onPause()");
-        super.onPause();
-
-//        if(CameraHolderNoThread.IsCameraCapturing()) {
-//            CameraHolderNoThread.CommandCloseCamera();
-//            CameraHolderNoThread.ReminderCapturing(true);
-//        }
     }
 
     @Override

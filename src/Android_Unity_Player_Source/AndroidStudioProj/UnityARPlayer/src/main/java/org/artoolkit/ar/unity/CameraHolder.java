@@ -160,7 +160,6 @@ public class CameraHolder {
     public void CloseCamera()
     {
         if(mCamera != null) {
-            StopCapture();
             mCamera.release();
             mCamera = null;
 

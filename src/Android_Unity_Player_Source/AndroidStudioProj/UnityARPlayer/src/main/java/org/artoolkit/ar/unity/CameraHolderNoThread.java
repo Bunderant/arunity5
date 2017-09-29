@@ -29,8 +29,11 @@ public class CameraHolderNoThread {
         Capturing
     }
 
+    protected final static String TAG = "CameraHolderNoThread";
+
     // provide static for call function from unity3d
     public static CameraHolderNoThread Instance = null;
+
     // --------------------------------------------------
     // Message ID
     // --------------------------------------------------
@@ -40,7 +43,7 @@ public class CameraHolderNoThread {
     // camera variable
     // --------------------------------------------------
     public SurfaceTexture mHolderTexture;
-    private Camera mCamera;
+    private Camera mCamera = null;
     private int mWidth = 0;
     private int mHeight = 0;
     private boolean mCameraIsFrontFacing = false;
@@ -68,18 +71,20 @@ public class CameraHolderNoThread {
     }
 
     public void OpenCamera() {
+
         if(mCamera != null) {
-            return;
+            mCamera.release();
+            mCamera = null;
         }
 
         // get camera ID
         mCameraIndex = findFacingCameraId(FaceBack);
         try {
             mCamera = Camera.open(mCameraIndex); // attempt to get a Camera instance
-            Log.i("CameraHolder", "Open Camera Success");
+            Log.i(TAG, "Open Camera Success");
         }
-        catch (Exception e){
-            Log.e("CameraHolder", "ERROR OPENING CAMERA");
+        catch (Exception e) {
+            Log.e(TAG, "Error opening camera with message: " + e.getMessage());
         }
 
         mHolderTexture = new SurfaceTexture(49);
@@ -87,7 +92,7 @@ public class CameraHolderNoThread {
             mCamera.setPreviewTexture(mHolderTexture);
             mCamera.setPreviewCallback(mPreviewCallback);
 
-            Log.i("CameraHolder", "Set Camera Preview Callback");
+            Log.i(TAG, "Set Camera Preview Callback");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -98,13 +103,25 @@ public class CameraHolderNoThread {
     public void CloseCamera()
     {
         if(mCamera != null) {
-            StopCapture();
-            mHolderTexture.release();
-            mHolderTexture = null;
-            mCamera.release();
-            mCamera = null;
+
+            try {
+                mHolderTexture.release();
+                mHolderTexture = null;
+            }
+            catch(Exception e) {
+                Log.e(TAG, "Could not release holder texture with message: " + e.getMessage());
+            }
+
+            try {
+                mCamera.release();
+                mCamera = null;
+            }
+            catch(Exception e) {
+                Log.e(TAG, "Could not release camera with message: " + e.getMessage());
+            }
+
             mState = CameraHolderState.Closed;
-            Log.i("CameraHolder", "Close Camera Success");
+            Log.i(TAG, "Close Camera Success");
         }
     }
 
@@ -115,22 +132,26 @@ public class CameraHolderNoThread {
             mCamera.startPreview();
 
             mState = CameraHolderState.Capturing;
-            Log.i("CameraHolder", "Start Capture Success");
+            Log.i(TAG, "Start Capture Success");
         }
     }
 
     public void StopCapture()
     {
         if(mCamera != null) {
-            mCamera.stopPreview();
+            try {
+                mCamera.stopPreview();
 
-            mState = CameraHolderState.Idle;
-            Log.i("CameraHolder", "Stop Capture Success");
+                mState = CameraHolderState.Idle;
+                Log.i(TAG, "Stop Capture Success");
+            }
+            catch(Exception e) {
+                Log.e(TAG, "Could not stop capture with message: " + e.getMessage());
+            }
         }
     }
 
-    public void DestroyCamera()
-    {
+    public void DestroyCamera() {
         mState = CameraHolderState.Closed;
     }
 
@@ -148,7 +169,7 @@ public class CameraHolderNoThread {
         mWidth = params.getPreviewSize().width;;
         mHeight = params.getPreviewSize().height;;
         mCameraIsFrontFacing = false;
-        Log.i("CameraHolder", "Set Config Camera");
+        Log.i(TAG, "Set Config Camera");
     }
 
     // --------------------------------------------------
@@ -170,6 +191,7 @@ public class CameraHolderNoThread {
             return true;
         } else {
             // no camera on this device
+            Log.i(TAG, "No camera");
             return false;
         }
     }
@@ -200,11 +222,17 @@ public class CameraHolderNoThread {
         if (CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.OpenCamera();
         }
+        else {
+            Log.i(TAG, "CommandOpenCamera() CameraHolderNoThread.Instance was null");
+        }
     }
 
     public static void CommandCloseCamera() {
         if (CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.CloseCamera();
+        }
+        else {
+            Log.i(TAG, "CommandCloseCamera() CameraHolderNoThread.Instance was null");
         }
     }
 
@@ -212,11 +240,18 @@ public class CameraHolderNoThread {
         if (CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.StartCapture();
         }
+        else {
+            Log.i(TAG, "CommandStartCapture() CameraHolderNoThread.Instance was null");
+        }
+
     }
 
     public static void CommandStopCapture() {
         if (CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.StopCapture();
+        }
+        else {
+            Log.i(TAG, "CommandStopCapture() CameraHolderNoThread.Instance was null");
         }
     }
 
@@ -225,7 +260,7 @@ public class CameraHolderNoThread {
         if (CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.mConfigW = w;
             CameraHolderNoThread.Instance.mConfigH = h;
-            Log.i("CameraHolder", "Set Camera Resolution : " + w + " : " + h);
+            Log.i(TAG, "Set Camera Resolution : " + w + " : " + h);
         }
     }
 
