@@ -124,6 +124,14 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         }
     }
 
+    public int GetVideoWidth() {
+        return _holder.GetParamWidth();
+    }
+
+    public int GetVideoHeight(){
+       return _holder.GetParamHeight();
+    }
+
     private void OpenAndStartCapture() {
         _holder.OpenCamera();
         _holder.StartCapture();
@@ -160,5 +168,10 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         // or whenever a new preference is added (e.g. after an application upgrade).
         int resID = getResources().getIdentifier("preferences", "xml", getPackageName());
         PreferenceManager.setDefaultValues(this, resID, false);
+    }
+
+    void setStereo(boolean stereo)
+    {
+
     }
 }

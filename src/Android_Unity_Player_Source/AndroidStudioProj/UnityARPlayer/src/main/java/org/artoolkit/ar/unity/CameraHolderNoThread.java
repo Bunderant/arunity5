@@ -5,8 +5,11 @@ import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.hardware.Camera.Size;
 import android.os.Message;
 import android.util.Log;
+
+import java.util.List;
 
 import org.artoolkit.ar.base.NativeInterface;
 
@@ -49,8 +52,8 @@ public class CameraHolderNoThread {
     private boolean mCameraIsFrontFacing = false;
     private int mCameraIndex= 0;
 
-    private int mConfigW = 640;
-    private int mConfigH = 480;
+    private int mConfigW = 1024;
+    private int mConfigH = 768;
 
     private CameraHolderState mState = CameraHolderState.Closed;
     private boolean mReminderCapturing = false;
@@ -159,9 +162,20 @@ public class CameraHolderNoThread {
     {
         Camera.Parameters params = mCamera.getParameters();
         params.setPreviewFormat(ImageFormat.NV21);
-        // 640x480
-        // 480x320
-        params.setPreviewSize(mConfigW, mConfigH);
+
+//        Size size = params.getPreferredPreviewSizeForVideo();
+//        if(size == null) {
+//            size = params.getPictureSize();
+//        }
+
+        List<Size> sizes = params.getSupportedVideoSizes();
+        Size optimalSize = getOptimalPreviewSize(sizes, mConfigW, mConfigH);
+        if (optimalSize != null) {
+            params.setPreviewSize(optimalSize.width, optimalSize.height);
+        }else {
+            params.setPreviewSize(mConfigW, mConfigH);
+        }
+
         // -- finish set parameter
         mCamera.setParameters(params);
         // gather some ARToolkit require values
@@ -170,6 +184,52 @@ public class CameraHolderNoThread {
         mHeight = params.getPreviewSize().height;;
         mCameraIsFrontFacing = false;
         Log.i(TAG, "Set Config Camera");
+    }
+
+    public int GetParamWidth() {
+        return mWidth;
+    }
+
+    public int GetParamHeight() {
+        return mHeight;
+    }
+
+    private Size getOptimalPreviewSize(List<Size> sizes, int w, int h) {
+        final double ASPECT_TOLERANCE = 0.05;
+        double targetRatio = (double) 4 / 3;
+
+        Log.i(TAG, "Looking for target ratio of: "+targetRatio+" from "+w+", "+h);
+        if (sizes == null) return null;
+
+        Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+
+        int targetHeight = h;
+
+        // Try to find an size match aspect ratio and size
+        for (Size size : sizes) {
+            double ratio = (double) size.width / size.height;
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
+            Log.i(TAG, "Checking size: "+size.width+", "+size.height);
+            if (Math.abs(size.height - targetHeight) < minDiff) {
+                optimalSize = size;
+                minDiff = Math.abs(size.height - targetHeight);
+            }
+        }
+
+        // Cannot find the one match the aspect ratio, ignore the requirement
+        if (optimalSize == null) {
+            minDiff = Double.MAX_VALUE;
+            for (Size size : sizes) {
+                if (Math.abs(size.height - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.height - targetHeight);
+                }
+            }
+        }
+
+        Log.i(TAG, "Found optimal size: "+optimalSize.width+", "+optimalSize.height);
+        return optimalSize;
     }
 
     // --------------------------------------------------
