@@ -51,12 +51,14 @@ package org.artoolkit.ar.unity;
 
 import com.unity3d.player.UnityPlayerActivity;
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.util.DisplayMetrics;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -78,6 +80,7 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
     protected final static int PERMISSION_REQUEST_CAMERA = 77;
 
     protected final static String TAG = "UnityARPlayerActivity";
+
     private CameraHolderNoThread _holder;
 
     @SuppressWarnings("unused")
@@ -87,7 +90,7 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             }
         });
 
@@ -105,6 +108,36 @@ public class UnityARPlayerActivity extends UnityPlayerActivity {
         else {
             OpenAndStartCapture();
         }
+    }
+
+    @SuppressWarnings("unused")
+    public void SetupCameraAspect4x3() {
+        _holder.SetResolutionTargetMax(1200, 800, false);
+        Log.i(TAG, "=========== Set up camera to use any resolution, 4x3 ratio ============");
+    }
+
+    @SuppressWarnings("unused")
+    public void SetupCameraAnyAspect() {
+        _holder.SetResolutionTargetMax(1200, 800, true);
+        Log.i(TAG, "=========== Set up camera to use any resolution ============");
+    }
+
+    @SuppressWarnings("unused")
+    public void SetupCamera640x480() {
+        _holder.SetResolutionTargetMax(640, 480, false);
+        Log.i(TAG, "=========== Set up camera to use 640 x 480 resolution ============");
+    }
+
+    @SuppressWarnings("unused")
+    public void SetupCamera864x480() {
+        _holder.SetResolutionTargetMax(864, 480, false);
+        Log.i(TAG, "=========== Set up camera to use 864 x 480 resolution ============");
+    }
+
+    @SuppressWarnings("unused")
+    public void SetupCamera1024x768() {
+        _holder.SetResolutionTargetMax(1024, 768, false);
+        Log.i(TAG, "=========== Set up camera to use 1024 x 768 resolution ============");
     }
 
     //Handle the result of asking the user for camera permission.

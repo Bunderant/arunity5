@@ -54,6 +54,7 @@ public class CameraHolderNoThread {
 
     private int mConfigW = 1024;
     private int mConfigH = 768;
+    private boolean forceDefaultAspectRatio;
 
     private CameraHolderState mState = CameraHolderState.Closed;
     private boolean mReminderCapturing = false;
@@ -64,6 +65,9 @@ public class CameraHolderNoThread {
 
     public CameraHolderNoThread()
     {
+        mConfigW = 1200;
+        mConfigH = 800;
+
         // remove last surface and set instance to this ?
         if(CameraHolderNoThread.Instance != null) {
             CameraHolderNoThread.Instance.CloseCamera();
@@ -71,6 +75,12 @@ public class CameraHolderNoThread {
             CameraHolderNoThread.Instance = null;
         }
         CameraHolderNoThread.Instance = this;
+    }
+
+    public void SetResolutionTargetMax(int targetWidth, int targetHeight, boolean forceDefaultAspectRatio) {
+        mConfigW = targetWidth;
+        mConfigH = targetHeight;
+        this.forceDefaultAspectRatio = forceDefaultAspectRatio;
     }
 
     public void OpenCamera() {
@@ -163,11 +173,6 @@ public class CameraHolderNoThread {
         Camera.Parameters params = mCamera.getParameters();
         params.setPreviewFormat(ImageFormat.NV21);
 
-//        Size size = params.getPreferredPreviewSizeForVideo();
-//        if(size == null) {
-//            size = params.getPictureSize();
-//        }
-
         List<Size> sizes = params.getSupportedVideoSizes();
         Size optimalSize = getOptimalPreviewSize(sizes, mConfigW, mConfigH);
         if (optimalSize != null) {
@@ -180,8 +185,8 @@ public class CameraHolderNoThread {
         mCamera.setParameters(params);
         // gather some ARToolkit require values
         params = mCamera.getParameters();
-        mWidth = params.getPreviewSize().width;;
-        mHeight = params.getPreviewSize().height;;
+        mWidth = params.getPreviewSize().width;
+        mHeight = params.getPreviewSize().height;
         mCameraIsFrontFacing = false;
         Log.i(TAG, "Set Config Camera");
     }
@@ -195,40 +200,67 @@ public class CameraHolderNoThread {
     }
 
     private Size getOptimalPreviewSize(List<Size> sizes, int w, int h) {
-        final double ASPECT_TOLERANCE = 0.05;
-        double targetRatio = (double) 4 / 3;
-
-        Log.i(TAG, "Looking for target ratio of: "+targetRatio+" from "+w+", "+h);
-        if (sizes == null) return null;
 
         Size optimalSize = null;
-        double minDiff = Double.MAX_VALUE;
+        double minDiffHeight = Double.MAX_VALUE;
 
+        int targetWidth = w;
         int targetHeight = h;
 
-        // Try to find an size match aspect ratio and size
-        for (Size size : sizes) {
-            double ratio = (double) size.width / size.height;
-            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
-            Log.i(TAG, "Checking size: "+size.width+", "+size.height);
-            if (Math.abs(size.height - targetHeight) < minDiff) {
-                optimalSize = size;
-                minDiff = Math.abs(size.height - targetHeight);
+        if (sizes == null) {
+            Log.d(TAG, "Null sizes. Bailing...");
+            return null;
+        }
+        else {
+            Log.d(TAG, sizes.size() + " sizes found. ALL SIZES:");
+            for (Size size : sizes) {
+                Log.d(TAG, "FOUND SIZE: " + size.width + ", " + size.height);
             }
         }
 
-        // Cannot find the one match the aspect ratio, ignore the requirement
-        if (optimalSize == null) {
-            minDiff = Double.MAX_VALUE;
+        if (forceDefaultAspectRatio) {
+            final double ASPECT_TOLERANCE = 0.05;
+            double targetRatio = (double) 4 / 3;
+            Log.i(TAG, "Looking for default target aspect ratio of: " + targetRatio + " from " + w + ", " + h);
+
             for (Size size : sizes) {
-                if (Math.abs(size.height - targetHeight) < minDiff) {
+                if (size.width > targetWidth || size.height > targetHeight) {
+                    continue;
+                }
+
+                double ratio = (double) size.width / size.height;
+                if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) {
+                    continue;
+                }
+
+                Log.i(TAG, "Checking size: " + size.width + ", " + size.height);
+                if (Math.abs(size.height - targetHeight) < minDiffHeight) {
                     optimalSize = size;
-                    minDiff = Math.abs(size.height - targetHeight);
+                    minDiffHeight = Math.abs(size.height - targetHeight);
                 }
             }
         }
 
-        Log.i(TAG, "Found optimal size: "+optimalSize.width+", "+optimalSize.height);
+        // If we didn't want to enforce the default aspect ratio, or a resolution with that ratio
+        // couldn't be found, just as close as possible to the requested maximum resolution:
+        if (!forceDefaultAspectRatio || optimalSize == null) {
+            double minDiffTotal = Double.MAX_VALUE;
+            for (Size size : sizes) {
+                Log.i(TAG, "Checking size: " + size.width + ", " + size.height);
+                if (size.width > targetWidth || size.height > targetHeight) {
+                    continue;
+                }
+                Log.i(TAG, "Checked size falls within max resolution: " + size.width + ", " + size.height);
+
+                float totalDiff = (targetHeight - size.height) + (targetWidth - size.width);
+                if (totalDiff < minDiffTotal) {
+                    optimalSize = size;
+                    minDiffTotal = totalDiff;
+                }
+            }
+        }
+
+        Log.i(TAG, "Found optimal size: "+ optimalSize.width + ", " + optimalSize.height);
         return optimalSize;
     }
 
